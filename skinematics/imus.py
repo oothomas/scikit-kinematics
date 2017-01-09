@@ -17,7 +17,7 @@ Date: Oct-2016
 import numpy as np
 import scipy as sp
 import scipy.constants as constants
-from scipy.integrate import cumtrapz
+from scipy.integrate import cumtrapz, trapz
 import matplotlib.pyplot as plt
 import pandas as pd 
 from numpy import r_, sum
