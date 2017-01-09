@@ -81,19 +81,19 @@ class IMU:
 
     Examples
     --------
-	>>> myimu = IMU(r'tests/data/data_xsens.txt', inType='XSens')
-	>>> 
-	>>> initialOrientation = np.array([[1,0,0],
-	>>>                                [0,0,-1],
-	>>>                                [0,1,0]])
-	>>> initialPosition = np.r_[0,0,0]
-	>>> 
-	>>> myimu.calc_orientation(initialOrientation)
-	>>> q_simple = myimu.quat[:,1:]
-	>>> 
-	>>> calcType = 'Madgwick'
-	>>> myimu.calc_orientation(initialOrientation, type=calcType)
-	>>> q_Kalman = myimu.quat[:,1:]
+    >>> myimu = IMU(r'tests/data/data_xsens.txt', inType='XSens')
+    >>> 
+    >>> initialOrientation = np.array([[1,0,0],
+    >>>                                [0,0,-1],
+    >>>                                [0,1,0]])
+    >>> initialPosition = np.r_[0,0,0]
+    >>> 
+    >>> myimu.calc_orientation(initialOrientation)
+    >>> q_simple = myimu.quat[:,1:]
+    >>> 
+    >>> calcType = 'Madgwick'
+    >>> myimu.calc_orientation(initialOrientation, type=calcType)
+    >>> q_Kalman = myimu.quat[:,1:]
  
     '''
 
@@ -137,7 +137,11 @@ class IMU:
             self.mag = data['mag']
         self.source = None
         self._setInfo()
-
+    
+    def set_deltaT(self, dtarray):
+        self.deltaT = drarray
+        
+    
     def calc_orientation(self, R_initialOrientation, type='quatInt'):
         '''
         Calculate the current orientation
@@ -214,13 +218,18 @@ class IMU:
         accReSpace = vector.rotate_vector(accReSensor, self.quat)
 
         # Position and Velocity through integration, assuming 0-velocity at t=0
-        vel = np.nan*np.ones_like(accReSpace)
-        pos = np.nan*np.ones_like(accReSpace)
-
+         vel = np.nan*np.ones_like(accReSpace)
+         pos = np.nan*np.ones_like(accReSpace)
+        print(vel.shape)
+        print(deltaTime.shape)
+        print(type(accReSpace))
+        print(accReSpace.shape)
+     
         for ii in range(accReSpace.shape[1]):
-            vel[:,ii] = cumtrapz(accReSpace[:,ii], dx=1./np.float(self.rate), initial=0)
-            pos[:,ii] = cumtrapz(vel[:,ii],        dx=1./np.float(self.rate), initial=initialPosition[ii])
-
+            vel[:,ii] = cumtrapz(y = accReSpace[:,ii], x = deltaTime[:,ii], initial=0) # using time instead of rate
+            pos[:,ii] = cumtrapz(y = vel[:,ii],        x = deltaTime[:,ii], initial=initialPosition[ii]) #dx=1./np.float(self.rate)
+ 
+        self.vel = vel # save velocity OT
         self.pos = pos
 
     def _checkRequirements(self):
@@ -483,18 +492,18 @@ def kalman_quat(rate, acc, omega, mag):
     Parameters
     ----------
     rate : float
-    	   sample rate [Hz]	
+           sample rate [Hz]    
     acc : (N,3) ndarray
-    	  linear acceleration [m/sec^2]
+          linear acceleration [m/sec^2]
     omega : (N,3) ndarray
-    	  angular velocity [rad/sec]
+          angular velocity [rad/sec]
     mag : (N,3) ndarray
-    	  magnetic field orientation
+          magnetic field orientation
 
     Returns
     -------
     qOut : (N,4) ndarray
-    	   unit quaternion, describing the orientation relativ to the coordinate system spanned by the local magnetic field, and gravity
+           unit quaternion, describing the orientation relativ to the coordinate system spanned by the local magnetic field, and gravity
 
     Notes
     -----
@@ -506,22 +515,22 @@ def kalman_quat(rate, acc, omega, mag):
 
     # Set parameters for Kalman Filter
     tstep = 1./rate
-    tau = [0.5, 0.5, 0.5]	# from Yun, 2006
+    tau = [0.5, 0.5, 0.5]    # from Yun, 2006
 
     # Initializations 
-    x_k = np.zeros(7)	# state vector
+    x_k = np.zeros(7)    # state vector
     z_k = np.zeros(7)   # measurement vector
     z_k_pre = np.zeros(7)
-    P_k = np.matrix( np.eye(7) )		 # error covariance matrix P_k
+    P_k = np.matrix( np.eye(7) )         # error covariance matrix P_k
 
     Phi_k = np.matrix( np.zeros((7,7)) ) # discrete state transition matrix Phi_k
     for ii in range(3):
         Phi_k[ii,ii] = np.exp(-tstep/tau[ii])
 
-    H_k = np.matrix( np.eye(7) )		# Identity matrix
+    H_k = np.matrix( np.eye(7) )        # Identity matrix
 
-    Q_k = np.matrix( np.zeros((7,7)) )	# process noise matrix Q_k
-    D = 0.0001*r_[0.4, 0.4, 0.4]		# [rad^2/sec^2]; from Yun, 2006
+    Q_k = np.matrix( np.zeros((7,7)) )    # process noise matrix Q_k
+    D = 0.0001*r_[0.4, 0.4, 0.4]        # [rad^2/sec^2]; from Yun, 2006
                                                                             # check 0.0001 in Yun
     for ii in range(3):
         Q_k[ii,ii] =  D[ii]/(2*tau[ii])  * ( 1-np.exp(-2*tstep/tau[ii]) )
@@ -543,7 +552,7 @@ def kalman_quat(rate, acc, omega, mag):
         accelVec  = acc[ii,:]
         magVec    = mag[ii,:]
         angvelVec = omega[ii,:]
-        z_k_pre = z_k.copy()	# watch out: by default, Python passes the reference!!
+        z_k_pre = z_k.copy()    # watch out: by default, Python passes the reference!!
 
         # Evaluate quaternion based on acceleration and magnetic field data
         accelVec_n = vector.normalize(accelVec)
@@ -626,15 +635,15 @@ class MadgwickAHRS:
              2*b[1]*(q[0]*q[2] + q[1]*q[3])   + 2*b[3]*(0.5 - q[1]**2 - q[2]**2) - Magnetometer[2]]
         
         J = np.array([
-            [-2*q[2],                 	2*q[3],                    -2*q[0],                         2*q[1]],
-            [ 2*q[1],                 	2*q[0],                	    2*q[3],                         2*q[2]],
+            [-2*q[2],                     2*q[3],                    -2*q[0],                         2*q[1]],
+            [ 2*q[1],                     2*q[0],                        2*q[3],                         2*q[2]],
             [0,                        -4*q[1],                    -4*q[2],                         0],
             [-2*b[3]*q[2],              2*b[3]*q[3],               -4*b[1]*q[2]-2*b[3]*q[0],       -4*b[1]*q[3]+2*b[3]*q[1]],
-            [-2*b[1]*q[3]+2*b[3]*q[1],	2*b[1]*q[2]+2*b[3]*q[0],    2*b[1]*q[1]+2*b[3]*q[3],       -2*b[1]*q[0]+2*b[3]*q[2]],
+            [-2*b[1]*q[3]+2*b[3]*q[1],    2*b[1]*q[2]+2*b[3]*q[0],    2*b[1]*q[1]+2*b[3]*q[3],       -2*b[1]*q[0]+2*b[3]*q[2]],
             [ 2*b[1]*q[2],              2*b[1]*q[3]-4*b[3]*q[1],    2*b[1]*q[0]-4*b[3]*q[2],        2*b[1]*q[1]]])
         
         step = J.T.dot(F)
-        step = vector.normalize(step)	# normalise step magnitude
+        step = vector.normalize(step)    # normalise step magnitude
 
         # Compute rate of change of quaternion
         qDot = 0.5 * quat.quatmult(q, np.hstack([0, Gyroscope])) - self.Beta * step
