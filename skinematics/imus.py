@@ -213,7 +213,7 @@ class IMU:
         # Acceleration, velocity, and position ----------------------------
         # From q and the measured acceleration, get the \frac{d^2x}{dt^2}
         g = constants.value('standard acceleration of gravity')
-        g_v = np.r_[0, 0, g] 
+        g_v = np.r_[0, g, 0] 
         accReSensor = self.acc - vector.rotate_vector(g_v, quat.quatinv(self.quat))
         accReSpace = vector.rotate_vector(accReSensor, self.quat)
 
