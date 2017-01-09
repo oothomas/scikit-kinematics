@@ -222,8 +222,8 @@ class IMU:
         pos = np.nan*np.ones_like(accReSpace)
      
         for ii in range(accReSpace.shape[1]):
-            vel[:,ii] = trapz(y = accReSpace[:,ii], x = self.deltaT[:,ii]) #x = self.deltaT[:,ii] #, initial=0
-            pos[:,ii] = trapz(y = vel[:,ii], x = self.deltaT[:,ii]) # dx=1./np.float(self.rate)
+            vel[:,ii] = cumtrapz(y = accReSpace[:,ii], x = self.deltaT[:,ii], initial=0)
+            pos[:,ii] = cumtrapz(y = vel[:,ii], x = self.deltaT[:,ii], initial=initialPosition[ii]) # dx=1./np.float(self.rate)
  
         self.vel = vel # save velocity OT
         self.pos = pos
