@@ -139,7 +139,7 @@ class IMU:
         self._setInfo()
     
     def set_deltaT(self, dtarray):
-        self.deltaT = drarray
+        self.deltaT = dtarray
         
     
     def calc_orientation(self, R_initialOrientation, type='quatInt'):
