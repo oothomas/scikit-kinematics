@@ -213,17 +213,13 @@ class IMU:
         # Acceleration, velocity, and position ----------------------------
         # From q and the measured acceleration, get the \frac{d^2x}{dt^2}
         g = constants.value('standard acceleration of gravity')
-        g_v = np.r_[0, g, 0] 
+        g_v = np.r_[0, 0, g] 
         accReSensor = self.acc - vector.rotate_vector(g_v, quat.quatinv(self.quat))
         accReSpace = vector.rotate_vector(accReSensor, self.quat)
 
         # Position and Velocity through integration, assuming 0-velocity at t=0
         vel = np.nan*np.ones_like(accReSpace)
         pos = np.nan*np.ones_like(accReSpace)
-        print(vel.shape)
-        print(self.deltaT.shape)
-        print(type(accReSpace))
-        print(accReSpace.shape)
      
         for ii in range(accReSpace.shape[1]):
             vel[:,ii] = cumtrapz(y = accReSpace[:,ii], x = self.deltaT[:,ii], initial=0) # using time instead of rate
