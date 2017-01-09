@@ -218,8 +218,8 @@ class IMU:
         accReSpace = vector.rotate_vector(accReSensor, self.quat)
 
         # Position and Velocity through integration, assuming 0-velocity at t=0
-         vel = np.nan*np.ones_like(accReSpace)
-         pos = np.nan*np.ones_like(accReSpace)
+        vel = np.nan*np.ones_like(accReSpace)
+        pos = np.nan*np.ones_like(accReSpace)
         print(vel.shape)
         print(deltaTime.shape)
         print(type(accReSpace))
