@@ -206,7 +206,7 @@ class IMU:
             return
 
         self.quat = quaternion
-        if position == True:
+        if type == 'quatInt':
             self.pos = position
 
     def calc_position(self, initialPosition):
